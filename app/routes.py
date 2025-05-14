@@ -1,23 +1,53 @@
-from flask import render_template, request, jsonify
+from flask import render_template, request
 from app import app
 import subprocess
 
-# Route utama untuk paparkan UI
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Daftar semua flag yang akan dipakai
+HTTPX_FLAGS = [
+    "-json",
+    "-status-code",
+    "-content-length",
+    "-content-type",
+    "-location",
+    "-favicon",
+    "-hash", "md5",
+    "-jarm",
+    "-web-server",
+    "-title",
+    "-tls-probe",
+    "-cdn",
+    "-waf-detect",
+    "-tech-detect",
+    "-path", "/admin,/api/v1",
+    "-probe",
+    "-screenshot",
+    "-system-chrome",
+    "-srd", "./screenshots",
+    "-body-preview",
+    "-body-preview-chars", "200",
+    "-strip-html",
+    "-fep",
+    "-dashboard",
+    "-asset-name", "MyScan",
+    "-dashboard-upload", "output.json"
+]
 
-# Route untuk scan dengan input target dan paparkan result
 @app.route('/scan', methods=['POST'])
 def scan():
-    target = request.form['target']  # Dapatkan target dari user input
+    target = request.form['target']
+    # Bangun command dengan menyisipkan target di depan flags
+    cmd = ["httpx", "-u", target] + HTTPX_FLAGS
+
     try:
-        # Jalankan scan menggunakan subprocess (buatkan fail scan untuk `httpx`)
+        # Jalankan httpx dengan semua flag
         result = subprocess.run(
-            ['httpx', '-target', target, '-json'], 
-            capture_output=True, text=True, check=True
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True
         )
         output = result.stdout
-        return render_template('index.html', output=output)
     except subprocess.CalledProcessError as e:
-        return render_template('index.html', output="Error scanning target.")
+        output = f"Error scanning target: {e.stderr or e}"
+
+    return render_template('index.html', output=output)
