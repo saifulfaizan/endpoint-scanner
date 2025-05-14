@@ -25,7 +25,7 @@ Siap dijalankan secara lokal maupun deploy di Render.com.
 
 1. Clone repo dan masuk folder:
    ```bash
-   git clone https://github.com/USERNAMEsaifulfaizan/endpoint-scanner.git
+   git clone https://github.com/saifulfaizan/endpoint-scanner.git
    cd endpoint-scanner-gui
    docker build -t endpoint-scanner .
    docker run --rm -p 5000:5000 endpoint-scanner
