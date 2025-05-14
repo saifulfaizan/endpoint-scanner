@@ -1,26 +1,29 @@
-FROM golang:1.23
+# 1) Stage Builder: install httpx Go binary
+FROM golang:1.23 AS builder
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+
+# 2) Final Stage: Flask GUI + httpx binary
 FROM python:3.9-slim
 
-# Copy requirements.txt and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the entire app
-COPY . .
-
-# Expose port untuk Flask
-EXPOSE 5000
-
-# Command untuk run Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
-RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
-RUN ln -s /go/bin/httpx /usr/local/bin/httpx
+# Pasang compiler untuk Python extensions (Flask dependency)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential python3-dev libffi-dev libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY scan_advanced_json.sh /app/scan_advanced_json.sh
-COPY targets.txt /app/targets.txt
+# Install Flask dari requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN chmod +x /app/scan_advanced_json.sh
+# Copy Flask app
+COPY app/ app/
 
-CMD ["/app/scan_advanced_json.sh"]
+# Salin httpx binary dari builder stage
+COPY --from=builder /go/bin/httpx /usr/local/bin/httpx
+
+EXPOSE 5000
+
+ENV FLASK_APP=app
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
