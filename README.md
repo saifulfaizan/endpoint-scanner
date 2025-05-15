@@ -1,5 +1,6 @@
 # Endpoint Scanner GUI (Flask + Httpx)
-![ENDPOINT](https://github.com/user-attachments/assets/15a704cd-2511-4886-9e4a-92d0220bfe07)
+![ENDPOINT](https://github.com/user-attachments/assets/ec0ac6fa-f223-4fa8-89e5-dc3364178971)
+
 
 https://endpoint-scanner.onrender.com/scan
 
