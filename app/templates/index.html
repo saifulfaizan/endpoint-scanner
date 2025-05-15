@@ -1,69 +1,87 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Endpoint Scanner</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            font-weight: bold;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        input[type="submit"] {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        input[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-        pre {
-            background-color: #f1f1f1;
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Endpoint Scanner GUI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
 </head>
 <body>
-    <div class="container">
-        <h1>Endpoint Scanner</h1>
-        <form action="/scan" method="post">
-            <div class="form-group">
-                <label for="target">Target URL</label>
-                <input type="text" name="target" id="target" required placeholder="Enter target URL">
-            </div>
-            <input type="submit" value="Scan">
-        </form>
-
-        {% if output %}
-            <h2>Scan Result</h2>
-            <pre>{{ output }}</pre>
-        {% endif %}
+  <div class="container py-4">
+    <h1 class="mb-4">Endpoint Scanner GUI</h1>
+    <form id="scanForm" class="input-group mb-3">
+      <input type="url" name="target" class="form-control" placeholder="Enter target URL" required autofocus/>
+      <button class="btn btn-primary" type="submit" id="scanBtn">Scan</button>
+    </form>
+    <div>
+      <button id="exportPdfBtn" class="btn btn-danger me-2" disabled>Export PDF</button>
+      <button id="exportCsvBtn" class="btn btn-success" disabled>Export CSV</button>
     </div>
+    <pre id="outputArea" class="mt-4 bg-light p-3" style="max-height:500px;overflow:auto;"></pre>
+  </div>
+
+  <script>
+    const scanForm = document.getElementById('scanForm');
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const outputArea = document.getElementById('outputArea');
+    let lastScanData = null;
+    let lastTarget = null;
+
+    scanForm.onsubmit = async e => {
+      e.preventDefault();
+      const formData = new FormData(scanForm);
+      lastTarget = formData.get('target');
+      outputArea.textContent = 'Scanning...';
+      try {
+        const res = await fetch('/scan', {method: 'POST', body: formData});
+        const json = await res.json();
+        if (json.error) {
+          outputArea.textContent = 'Error: ' + json.error;
+          lastScanData = null;
+        } else {
+          outputArea.textContent = JSON.stringify(json, null, 2);
+          lastScanData = json;
+          exportPdfBtn.disabled = false;
+          exportCsvBtn.disabled = false;
+        }
+      } catch (err) {
+        outputArea.textContent = 'Request failed: ' + err.message;
+      }
+    };
+
+    exportPdfBtn.onclick = async () => {
+      if (!lastScanData || !lastTarget) return;
+      const payload = {target: lastTarget, results: lastScanData};
+      const res = await fetch('/export/pdf', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = lastTarget.replace(/[/:]/g, '_') + '.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    exportCsvBtn.onclick = async () => {
+      if (!lastScanData) return;
+      const res = await fetch('/export/csv', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(lastScanData)
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scan_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
 </body>
 </html>
